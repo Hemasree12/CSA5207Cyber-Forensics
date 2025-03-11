@@ -1,0 +1,82 @@
+import os
+import platform
+import winreg
+import win32evtlog
+
+def analyze_windows_event_logs():
+    """Extracts Windows Event Logs for forensic analysis"""
+    log_type = 'Security'  
+    server = 'localhost'
+    
+    try:
+        hand = win32evtlog.OpenEventLog(server, log_type)
+        flags = win32evtlog.EVENTLOG_BACKWARDS_READ | win32evtlog.EVENTLOG_SEQUENTIAL_READ
+        events = win32evtlog.ReadEventLog(hand, flags, 0)
+
+        print("\n--- Windows Event Log Analysis ---\n")
+        for event in events[:5]:  
+            print(f"Event ID: {event.EventID}, Time Generated: {event.TimeGenerated}")
+
+        win32evtlog.CloseEventLog(hand)
+    except Exception as e:
+        print(f"Error reading Windows Event Logs: {e}")
+
+def analyze_windows_registry():
+    """Extracts registry keys related to user activity"""
+    try:
+        reg_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+        reg = winreg.ConnectRegistry(None, winreg.HKEY_LOCAL_MACHINE)
+        key = winreg.OpenKey(reg, reg_path)
+        
+        print("\n--- Windows Registry Analysis ---\n")
+        i = 0
+        while True:
+            try:
+                value = winreg.EnumValue(key, i)
+                print(f"{value[0]}: {value[1]}")
+                i += 1
+            except OSError:
+                break
+
+        winreg.CloseKey(key)
+    except Exception as e:
+        print(f"Error reading registry: {e}")
+
+def analyze_bash_history():
+    """Analyzes Linux Bash command history"""
+    bash_history_file = os.path.expanduser("~/.bash_history")
+
+    try:
+        with open(bash_history_file, 'r') as file:
+            commands = file.readlines()
+
+        print("\n--- Bash History Analysis ---\n")
+        for index, command in enumerate(commands[-5:], start=1): 
+            print(f"{index}: {command.strip()}")
+    except Exception as e:
+        print(f"Error reading bash history: {e}")
+
+def analyze_file_system():
+    """Analyzes files and their metadata in a directory"""
+    directory = os.path.expanduser("~")  
+
+    try:
+        print("\n--- File System Analysis ---\n")
+        for file_name in os.listdir(directory)[:5]:  
+            file_path = os.path.join(directory, file_name)
+            if os.path.isfile(file_path):
+                print(f"File: {file_name}, Size: {os.path.getsize(file_path)} bytes")
+    except Exception as e:
+        print(f"Error analyzing file system: {e}")
+
+if __name__ == "__main__":
+    os_type = platform.system()
+
+    print(f"Operating System Detected: {os_type}\n")
+
+    if os_type == "Windows":
+        analyze_windows_event_logs()
+        analyze_windows_registry()
+    elif os_type == "Linux":
+        analyze_bash_history()
+    analyze_file_system()
